@@ -266,9 +266,14 @@ class BubblewrapBuilder:
                                 if p_pth.exists():
                                     bind_target = p_pth.parent if p_pth.name == "src" else p_pth
                                     self.ro_bind(bind_target, try_ok=True)
+            if p_str.startswith(str(Path.home() / ".local")):
+                self.ro_bind(Path.home() / ".local", try_ok=True)
             elif not any(p_str.startswith(prefix) for prefix in ("/usr", "/bin", "/lib", "/opt", "/nix")):
-                parent_dir = Path(p_str).parent
-                self.ro_bind(parent_dir, try_ok=True)
+                p_path = Path(p_str)
+                if p_path.parent.name == "bin":
+                    self.ro_bind(p_path.parent.parent, try_ok=True)
+                else:
+                    self.ro_bind(p_path.parent, try_ok=True)
 
         return self
 
