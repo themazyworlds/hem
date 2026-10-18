@@ -18,14 +18,41 @@ from pathlib import Path
 from typing import IO, Any, Self
 
 
+class SandboxUnavailableError(RuntimeError):
+    """Raised when bubblewrap (bwrap) sandbox is requested but unavailable on the host system."""
+
+    def __init__(
+        self,
+        reason: str = "Bubblewrap ('bwrap') is not installed or operational on this system.",
+        hint: str | None = "Install 'bubblewrap' (bwrap) or run in an environment with container namespace support.",
+    ) -> None:
+        self.reason = reason
+        self.hint = hint
+        self.message = f"Sandbox isolation unavailable: {reason}"
+        super().__init__(f"{self.message} (Hint: {hint})" if hint else self.message)
+
+
 class BubblewrapBuilder:
     """Fluent, type-safe builder for constructing Bubblewrap (bwrap) execution arguments."""
 
     _AVAILABLE: bool | None = None
 
-    def __init__(self, bwrap_path: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        bwrap_path: str | Path | None = None,
+        *,
+        require_available: bool = False,
+    ) -> None:
+        if require_available and not self.is_available():
+            raise SandboxUnavailableError()
         resolved_bwrap = str(bwrap_path) if bwrap_path else (shutil.which("bwrap") or "bwrap")
         self._args: list[str] = [resolved_bwrap]
+
+    def ensure_available(self) -> Self:
+        """Verify bubblewrap is operational on the host system, raising SandboxUnavailableError if not."""
+        if not self.is_available():
+            raise SandboxUnavailableError()
+        return self
 
     @classmethod
     def is_available(cls) -> bool:
@@ -308,6 +335,7 @@ class BubblewrapBuilder:
         self,
         target_cmd: Sequence[str] | None = None,
         *,
+        require_available: bool = True,
         capture_output: bool = False,
         check: bool = False,
         timeout: float | None = None,
@@ -320,6 +348,8 @@ class BubblewrapBuilder:
         stderr: int | IO[Any] | None = None,
     ) -> subprocess.CompletedProcess[Any]:
         """Execute the built bubblewrap command using subprocess.run."""
+        if require_available and self._args and "bwrap" in self._args[0]:
+            self.ensure_available()
         return run_command(
             self.build(target_cmd),
             capture_output=capture_output,
@@ -338,6 +368,7 @@ class BubblewrapBuilder:
         self,
         target_cmd: Sequence[str] | None = None,
         *,
+        require_available: bool = True,
         capture_output: bool = False,
         check: bool = False,
         timeout: float | None = None,
@@ -350,6 +381,8 @@ class BubblewrapBuilder:
         stderr: int | None = None,
     ) -> subprocess.CompletedProcess[Any]:
         """Execute the built bubblewrap command asynchronously using asyncio.create_subprocess_exec."""
+        if require_available and self._args and "bwrap" in self._args[0]:
+            self.ensure_available()
         return await async_run_command(
             self.build(target_cmd),
             capture_output=capture_output,

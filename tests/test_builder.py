@@ -144,3 +144,22 @@ def test_top_level_command_runners():
 
     asyncio.run(_test())
 
+
+def test_sandbox_unavailable_error():
+    from unittest.mock import patch
+
+    import pytest
+
+    from hem import BubblewrapBuilder, SandboxUnavailableError
+
+    with patch.object(BubblewrapBuilder, "is_available", return_value=False):
+        builder = BubblewrapBuilder()
+        with pytest.raises(SandboxUnavailableError) as exc_info:
+            builder.ensure_available()
+        assert "Sandbox isolation unavailable" in str(exc_info.value)
+        assert exc_info.value.hint is not None
+
+        with pytest.raises(SandboxUnavailableError):
+            BubblewrapBuilder(require_available=True)
+
+

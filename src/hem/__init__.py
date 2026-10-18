@@ -4,12 +4,18 @@ Hem • Pure-Python, type-safe Bubblewrap (bwrap) sandbox builder and container 
 
 from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired
 
-from hem.builder import BubblewrapBuilder, async_run_command, run_command
+from hem.builder import (
+    BubblewrapBuilder,
+    SandboxUnavailableError,
+    async_run_command,
+    run_command,
+)
 
 __all__ = [
     "BubblewrapBuilder",
     "CalledProcessError",
     "CompletedProcess",
+    "SandboxUnavailableError",
     "TimeoutExpired",
     "async_run_command",
     "run_command",
