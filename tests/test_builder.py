@@ -75,3 +75,36 @@ def test_builder_copy():
 def test_is_available():
     avail = BubblewrapBuilder.is_available()
     assert isinstance(avail, bool)
+
+
+def test_run_execution():
+    builder = BubblewrapBuilder("echo")
+    res = builder.run(["hem-run-test"], capture_output=True, text=True)
+    assert res.returncode == 0
+    assert "hem-run-test" in res.stdout
+
+
+def test_async_run_execution():
+    import asyncio
+
+    async def _test():
+        builder = BubblewrapBuilder("echo")
+        res = await builder.async_run(["hem-async-test"], capture_output=True, text=True)
+        assert res.returncode == 0
+        assert "hem-async-test" in res.stdout
+
+    asyncio.run(_test())
+
+
+def test_async_run_timeout():
+    import asyncio
+    import subprocess
+
+    import pytest
+
+    async def _test():
+        builder = BubblewrapBuilder("sleep")
+        with pytest.raises(subprocess.TimeoutExpired):
+            await builder.async_run(["5"], timeout=0.05)
+
+    asyncio.run(_test())
