@@ -15,6 +15,7 @@ import os
 import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from hem.errors import UnknownResourceError
@@ -30,17 +31,18 @@ class Resource(Protocol):
         ...
 
 
-def expand(value: str, env: Mapping[str, str]) -> str:
+def expand(value: str | Path, env: Mapping[str, str]) -> str:
     """Expand ``$VAR``/``${VAR}`` and leading ``~`` using ``env`` only. Unknown variables are left as-is."""
-    if value.startswith("~") and (value == "~" or value.startswith("~/")):
+    val_str = str(value)
+    if val_str.startswith("~") and (val_str == "~" or val_str.startswith("~/")):
         home = env.get("HOME", "")
-        value = home + value[1:] if home else value
+        val_str = home + val_str[1:] if home else val_str
 
     def _replace_var(match: re.Match[str]) -> str:
         var_name = match.group(1) or match.group(2)
         return env.get(var_name, match.group(0))
 
-    return re.sub(r"\$(?:([A-Za-z0-9_]+)|\{([A-Za-z0-9_]+)\})", _replace_var, value)
+    return re.sub(r"\$(?:([A-Za-z0-9_]+)|\{([A-Za-z0-9_]+)\})", _replace_var, val_str)
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +150,7 @@ class Sound:
 class Socket:
     """Grants access to an arbitrary Unix domain socket file or socket directory."""
 
-    path: str
+    path: str | Path
     writable: bool = False
     try_ok: bool = True
 
@@ -162,8 +164,8 @@ class Socket:
 class PathGrant:
     """Grants access to a host filesystem path."""
 
-    path: str
-    target: str | None = None
+    path: str | Path
+    target: str | Path | None = None
     writable: bool = False
     try_ok: bool = True
 
