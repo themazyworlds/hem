@@ -1,0 +1,44 @@
+[project]
+name = "hem"
+version = "0.1.0"
+description = "Hem • Pure-Python, type-safe Bubblewrap (bwrap) sandbox builder and container isolation library"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "themazyworlds", email = "meerahemant9086@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = []
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+    "Topic :: Security",
+    "Topic :: System :: Systems Administration",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "pytest>=9.1.1",
+    "ruff>=0.16.8",
+]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+include = ["src", "tests"]
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
