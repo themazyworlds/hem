@@ -63,6 +63,24 @@ def test_builder_composite_methods():
     assert "--die-with-parent" in cmd
 
 
+def test_builder_python_and_env_methods():
+    import sys
+
+    builder = (
+        BubblewrapBuilder("/usr/bin/bwrap")
+        .set_standard_env({"HOME": "/custom/home", "PYTHONPATH": "/custom/lib"})
+        .bind_python_runtime()
+        .bind_executable_dependencies([sys.executable, "-c", "print(1)"])
+        .bind_script_sources(["script.py"])
+    )
+    cmd = builder.build()
+
+    assert "--setenv" in cmd
+    assert "/custom/home" in cmd
+    assert "/usr/bin/bwrap" == cmd[0]
+
+
+
 def test_builder_copy():
     base = BubblewrapBuilder("/usr/bin/bwrap").clearenv().ro_bind("/usr")
     cloned = base.copy().setenv("KEY", "VALUE")

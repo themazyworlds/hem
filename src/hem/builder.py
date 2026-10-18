@@ -7,10 +7,12 @@ Zero runtime dependencies.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 from typing import IO, Any, Self
@@ -199,6 +201,104 @@ class BubblewrapBuilder:
             self.ro_bind(ws_path)
         self.chdir(ws_path)
         return self
+
+    def bind_python_runtime(self, extra_paths: Sequence[str | Path] | None = None) -> Self:
+        """Bind Python virtualenv prefixes, sys.path locations, and extra package paths into sandbox."""
+        for check_path in (sys.prefix, sys.base_prefix, getattr(sys, "base_exec_prefix", None)):
+            if check_path and Path(check_path).exists():
+                p_resolved = Path(check_path).resolve()
+                p_str = str(p_resolved)
+                if not any(p_str.startswith(prefix) for prefix in ("/usr", "/lib", "/opt", "/nix")):
+                    self.ro_bind(p_resolved, try_ok=True)
+
+        sys_temp = tempfile.gettempdir()
+        ignored_prefixes = ("/usr", "/lib", "/opt", "/nix", sys_temp)
+        for entry in sys.path:
+            if entry and Path(entry).exists():
+                p_res = Path(entry).resolve()
+                p_str = str(p_res)
+                if not any(p_str.startswith(prefix) for prefix in ignored_prefixes):
+                    target = p_res.parent if p_res.name == "src" else p_res
+                    self.ro_bind(target, try_ok=True)
+
+        if extra_paths:
+            for extra in extra_paths:
+                if extra and Path(extra).exists():
+                    self.ro_bind(Path(extra).resolve(), try_ok=True)
+
+        return self
+
+    def bind_executable_dependencies(self, cmd: Sequence[str]) -> Self:
+        """Bind target executable path and containing venv or linked source directories into sandbox."""
+        if not cmd or not cmd[0]:
+            return self
+        exe_target = shutil.which(cmd[0]) or cmd[0]
+        if not Path(exe_target).exists():
+            return self
+
+        raw_path = str(Path(exe_target).absolute())
+        resolved_path = str(Path(exe_target).resolve())
+        for p_str in (raw_path, resolved_path):
+            if ".venv" in p_str:
+                venv_root = p_str.split("/bin/")[0]
+                self.ro_bind(venv_root, try_ok=True)
+                with contextlib.suppress(OSError):
+                    for pth in Path(venv_root).glob("lib*/python*/site-packages/*.pth"):
+                        for line in pth.read_text(encoding="utf-8").splitlines():
+                            target_line = line.strip()
+                            if target_line and not target_line.startswith(("#", "import ")):
+                                p_pth = Path(target_line).resolve()
+                                if p_pth.exists():
+                                    bind_target = p_pth.parent if p_pth.name == "src" else p_pth
+                                    self.ro_bind(bind_target, try_ok=True)
+            elif not any(p_str.startswith(prefix) for prefix in ("/usr", "/bin", "/lib", "/opt", "/nix")):
+                parent_dir = Path(p_str).parent
+                self.ro_bind(parent_dir, try_ok=True)
+
+        return self
+
+    def bind_script_sources(self, cmd: Sequence[str]) -> Self:
+        """Inspect command arguments and bind any script files or existing directory trees."""
+        for arg in cmd:
+            if arg.endswith(".py") or Path(arg).exists():
+                p_arg = Path(arg).resolve()
+                if p_arg.is_file():
+                    self.ro_bind(p_arg.parent, try_ok=True)
+                elif p_arg.is_dir():
+                    self.ro_bind(p_arg, try_ok=True)
+        return self
+
+    def set_standard_env(
+        self,
+        env: dict[str, str] | None = None,
+        *,
+        uv_cache_dir: str | Path | None = None,
+    ) -> Self:
+        """Configure standard container environment variables and mount PYTHONPATH directories."""
+        target_env = env if env is not None else dict(os.environ)
+
+        self.setenv("HOME", target_env.get("HOME", str(Path.home())))
+        self.setenv("USER", target_env.get("USER", os.getenv("USER", "user")))
+        self.setenv("PATH", target_env.get("PATH", "/usr/bin:/bin"))
+        if uv_cache_dir:
+            self.setenv("UV_CACHE_DIR", str(uv_cache_dir))
+        else:
+            self.setenv("UV_CACHE_DIR", target_env.get("UV_CACHE_DIR", "/tmp/uv_cache"))
+
+        self.setenv("PYTHONPATH", target_env.get("PYTHONPATH"))
+        self.setenv("TERMINAL", target_env.get("TERMINAL"))
+        self.setenv("XDG_CONFIG_HOME", target_env.get("XDG_CONFIG_HOME"))
+        self.setenv("XDG_DATA_HOME", target_env.get("XDG_DATA_HOME"))
+        self.setenv("XDG_RUNTIME_DIR", target_env.get("XDG_RUNTIME_DIR"))
+
+        pythonpath = target_env.get("PYTHONPATH") or ""
+        if pythonpath:
+            for p in pythonpath.split(":"):
+                if p and Path(p).exists():
+                    self.ro_bind(Path(p).resolve(), try_ok=True)
+
+        return self
+
 
     def build(self, target_cmd: Sequence[str] | None = None) -> list[str]:
         """Compile the complete Bubblewrap command tokens, appending target executable command."""
