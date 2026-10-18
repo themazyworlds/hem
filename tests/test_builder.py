@@ -80,7 +80,6 @@ def test_builder_python_and_env_methods():
     assert "/usr/bin/bwrap" == cmd[0]
 
 
-
 def test_builder_copy():
     base = BubblewrapBuilder("/usr/bin/bwrap").clearenv().ro_bind("/usr")
     cloned = base.copy().setenv("KEY", "VALUE")
@@ -161,5 +160,3 @@ def test_sandbox_unavailable_error():
 
         with pytest.raises(SandboxUnavailableError):
             BubblewrapBuilder(require_available=True)
-
-

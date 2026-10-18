@@ -17,19 +17,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import IO, Any, Self
 
-
-class SandboxUnavailableError(RuntimeError):
-    """Raised when bubblewrap (bwrap) sandbox is requested but unavailable on the host system."""
-
-    def __init__(
-        self,
-        reason: str = "Bubblewrap ('bwrap') is not installed or operational on this system.",
-        hint: str | None = "Install 'bubblewrap' (bwrap) or run in an environment with container namespace support.",
-    ) -> None:
-        self.reason = reason
-        self.hint = hint
-        self.message = f"Sandbox isolation unavailable: {reason}"
-        super().__init__(f"{self.message} (Hint: {hint})" if hint else self.message)
+from hem.errors import SandboxUnavailableError
 
 
 class BubblewrapBuilder:
@@ -326,7 +314,6 @@ class BubblewrapBuilder:
 
         return self
 
-
     def build(self, target_cmd: Sequence[str] | None = None) -> list[str]:
         """Compile the complete Bubblewrap command tokens, appending target executable command."""
         return list(self._args) + (list(target_cmd) if target_cmd else [])
@@ -546,4 +533,3 @@ async def async_run_command(
         stdout=out,
         stderr=err,
     )
-
