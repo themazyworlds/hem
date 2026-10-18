@@ -26,3 +26,15 @@ class SandboxUnavailableError(SandboxError):
 
 class ResourceResolutionError(SandboxError):
     """Raised when a requested sandbox resource cannot be resolved or mounted."""
+
+
+class UnknownResourceError(ResourceResolutionError):
+    """Raised when an unknown resource token is parsed."""
+
+
+class ProfileError(SandboxError):
+    """Raised when an invalid or unknown profile is requested."""
+
+
+class BackendError(SandboxError):
+    """Raised when a sandbox backend fails to compile or enforce a specification."""
