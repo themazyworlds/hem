@@ -46,7 +46,7 @@ class BubblewrapBuilder:
             )
             cls._AVAILABLE = res.returncode == 0
             return cls._AVAILABLE
-        except OSError, subprocess.SubprocessError:
+        except (OSError, subprocess.SubprocessError):
             cls._AVAILABLE = False
             return False
 
