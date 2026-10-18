@@ -108,3 +108,21 @@ def test_async_run_timeout():
             await builder.async_run(["5"], timeout=0.05)
 
     asyncio.run(_test())
+
+
+def test_top_level_command_runners():
+    import asyncio
+
+    from hem import async_run_command, run_command
+
+    res = run_command(["echo", "direct-run"], capture_output=True, text=True)
+    assert res.returncode == 0
+    assert "direct-run" in res.stdout
+
+    async def _test():
+        a_res = await async_run_command(["echo", "direct-async"], capture_output=True, text=True)
+        assert a_res.returncode == 0
+        assert "direct-async" in a_res.stdout
+
+    asyncio.run(_test())
+

@@ -220,15 +220,13 @@ class BubblewrapBuilder:
         stderr: int | IO[Any] | None = None,
     ) -> subprocess.CompletedProcess[Any]:
         """Execute the built bubblewrap command using subprocess.run."""
-        full_cmd = self.build(target_cmd)
-        target_env = os.environ.copy() if env is None else env
-        return subprocess.run(
-            full_cmd,
+        return run_command(
+            self.build(target_cmd),
             capture_output=capture_output,
             check=check,
             timeout=timeout,
             cwd=cwd,
-            env=target_env,
+            env=env,
             text=text,
             input=input,
             stdin=stdin,
@@ -252,83 +250,18 @@ class BubblewrapBuilder:
         stderr: int | None = None,
     ) -> subprocess.CompletedProcess[Any]:
         """Execute the built bubblewrap command asynchronously using asyncio.create_subprocess_exec."""
-        full_cmd = self.build(target_cmd)
-        target_env = os.environ.copy() if env is None else env
-        target_cwd = str(cwd) if cwd is not None else None
-
-        proc_stdout = stdout
-        proc_stderr = stderr
-        proc_stdin = stdin
-
-        if capture_output:
-            proc_stdout = asyncio.subprocess.PIPE
-            proc_stderr = asyncio.subprocess.PIPE
-
-        input_bytes: bytes | None = None
-        if input is not None:
-            proc_stdin = asyncio.subprocess.PIPE
-            input_bytes = input.encode("utf-8") if isinstance(input, str) else input
-
-        proc = await asyncio.create_subprocess_exec(
-            *full_cmd,
-            stdin=proc_stdin,
-            stdout=proc_stdout,
-            stderr=proc_stderr,
-            cwd=target_cwd,
-            env=target_env,
-        )
-
-        out_b: bytes | None = None
-        err_b: bytes | None = None
-
-        try:
-            if timeout is not None and timeout > 0:
-                out_b, err_b = await asyncio.wait_for(
-                    proc.communicate(input=input_bytes),
-                    timeout=timeout,
-                )
-            else:
-                out_b, err_b = await proc.communicate(input=input_bytes)
-        except TimeoutError:
-            try:
-                proc.kill()
-            except (ProcessLookupError, OSError):
-                pass
-            await proc.wait()
-            raise subprocess.TimeoutExpired(
-                cmd=full_cmd,
-                timeout=timeout or 0.0,
-                output=out_b.decode("utf-8", errors="replace") if (text and out_b) else out_b,
-                stderr=err_b.decode("utf-8", errors="replace") if (text and err_b) else err_b,
-            ) from None
-        except asyncio.CancelledError:
-            try:
-                proc.kill()
-            except (ProcessLookupError, OSError):
-                pass
-            await proc.wait()
-            raise
-
-        out: Any = out_b
-        err: Any = err_b
-        if text:
-            out = out_b.decode("utf-8", errors="replace") if out_b is not None else ""
-            err = err_b.decode("utf-8", errors="replace") if err_b is not None else ""
-
-        retcode = proc.returncode if proc.returncode is not None else 0
-        if check and retcode != 0:
-            raise subprocess.CalledProcessError(
-                retcode,
-                full_cmd,
-                output=out,
-                stderr=err,
-            )
-
-        return subprocess.CompletedProcess(
-            args=full_cmd,
-            returncode=retcode,
-            stdout=out,
-            stderr=err,
+        return await async_run_command(
+            self.build(target_cmd),
+            capture_output=capture_output,
+            check=check,
+            timeout=timeout,
+            cwd=cwd,
+            env=env,
+            text=text,
+            input=input,
+            stdin=stdin,
+            stdout=stdout,
+            stderr=stderr,
         )
 
     def popen(
@@ -354,3 +287,130 @@ class BubblewrapBuilder:
             stdout=stdout,
             stderr=stderr,
         )
+
+
+def run_command(
+    cmd: Sequence[str],
+    *,
+    capture_output: bool = False,
+    check: bool = False,
+    timeout: float | None = None,
+    cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
+    text: bool = False,
+    input: str | bytes | None = None,
+    stdin: int | IO[Any] | None = None,
+    stdout: int | IO[Any] | None = None,
+    stderr: int | IO[Any] | None = None,
+) -> subprocess.CompletedProcess[Any]:
+    """Execute a command synchronously using subprocess.run."""
+    target_env = os.environ.copy() if env is None else env
+    return subprocess.run(
+        list(cmd),
+        capture_output=capture_output,
+        check=check,
+        timeout=timeout,
+        cwd=cwd,
+        env=target_env,
+        text=text,
+        input=input,
+        stdin=stdin,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+
+async def async_run_command(
+    cmd: Sequence[str],
+    *,
+    capture_output: bool = False,
+    check: bool = False,
+    timeout: float | None = None,
+    cwd: str | Path | None = None,
+    env: dict[str, str] | None = None,
+    text: bool = False,
+    input: str | bytes | None = None,
+    stdin: int | None = None,
+    stdout: int | None = None,
+    stderr: int | None = None,
+) -> subprocess.CompletedProcess[Any]:
+    """Execute a command asynchronously using asyncio.create_subprocess_exec."""
+    full_cmd = list(cmd)
+    target_env = os.environ.copy() if env is None else env
+    target_cwd = str(cwd) if cwd is not None else None
+
+    proc_stdout = stdout
+    proc_stderr = stderr
+    proc_stdin = stdin
+
+    if capture_output:
+        proc_stdout = asyncio.subprocess.PIPE
+        proc_stderr = asyncio.subprocess.PIPE
+
+    input_bytes: bytes | None = None
+    if input is not None:
+        proc_stdin = asyncio.subprocess.PIPE
+        input_bytes = input.encode("utf-8") if isinstance(input, str) else input
+
+    proc = await asyncio.create_subprocess_exec(
+        *full_cmd,
+        stdin=proc_stdin,
+        stdout=proc_stdout,
+        stderr=proc_stderr,
+        cwd=target_cwd,
+        env=target_env,
+    )
+
+    out_b: bytes | None = None
+    err_b: bytes | None = None
+
+    try:
+        if timeout is not None and timeout > 0:
+            out_b, err_b = await asyncio.wait_for(
+                proc.communicate(input=input_bytes),
+                timeout=timeout,
+            )
+        else:
+            out_b, err_b = await proc.communicate(input=input_bytes)
+    except TimeoutError:
+        try:
+            proc.kill()
+        except (ProcessLookupError, OSError):
+            pass
+        await proc.wait()
+        raise subprocess.TimeoutExpired(
+            cmd=full_cmd,
+            timeout=timeout or 0.0,
+            output=out_b.decode("utf-8", errors="replace") if (text and out_b) else out_b,
+            stderr=err_b.decode("utf-8", errors="replace") if (text and err_b) else err_b,
+        ) from None
+    except asyncio.CancelledError:
+        try:
+            proc.kill()
+        except (ProcessLookupError, OSError):
+            pass
+        await proc.wait()
+        raise
+
+    out: Any = out_b
+    err: Any = err_b
+    if text:
+        out = out_b.decode("utf-8", errors="replace") if out_b is not None else ""
+        err = err_b.decode("utf-8", errors="replace") if err_b is not None else ""
+
+    retcode = proc.returncode if proc.returncode is not None else 0
+    if check and retcode != 0:
+        raise subprocess.CalledProcessError(
+            retcode,
+            full_cmd,
+            output=out,
+            stderr=err,
+        )
+
+    return subprocess.CompletedProcess(
+        args=full_cmd,
+        returncode=retcode,
+        stdout=out,
+        stderr=err,
+    )
+
