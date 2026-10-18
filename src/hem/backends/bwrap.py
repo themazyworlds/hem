@@ -4,13 +4,13 @@ Hem • Bubblewrap (bwrap) Backend Compiler.
 
 from __future__ import annotations
 
-import shutil
-import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+lazy import shutil
+lazy import subprocess
 
-from hem.spec import Mount, MountKind, SandboxSpec
+lazy from hem.spec import Mount, MountKind, SandboxSpec
 
 
 def _mount_sort_key(m: Mount) -> tuple[int, int, str]:

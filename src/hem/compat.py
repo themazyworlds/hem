@@ -17,18 +17,18 @@ from __future__ import annotations
 
 import contextlib
 import os
-import shutil
-import subprocess
 import sys
-import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import IO, Any, Self
+lazy import shutil
+lazy import subprocess
+lazy import tempfile
 
-from hem.backends.bwrap import BubblewrapBackend
-from hem.errors import SandboxUnavailableError
-from hem.runner import async_run_argv, popen_argv, run_argv
+lazy from hem.backends.bwrap import BubblewrapBackend
+lazy from hem.errors import SandboxUnavailableError
+lazy from hem.runner import async_run_argv, popen_argv, run_argv
 
 
 class BubblewrapBuilder:

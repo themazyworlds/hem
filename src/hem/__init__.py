@@ -2,11 +2,11 @@
 Hem • Pure-Python, type-safe Bubblewrap (bwrap) sandbox builder and container isolation library.
 """
 
-from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired
+lazy from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired
 
-from hem.api import Explanation, Sandbox, async_run, is_available, run
-from hem.backends import Backend, BubblewrapBackend, DryRunBackend
-from hem.compat import (
+lazy from hem.api import Explanation, Sandbox, async_run, is_available, run
+lazy from hem.backends import Backend, BubblewrapBackend, DryRunBackend
+lazy from hem.compat import (
     BubblewrapBuilder,
     allows_network,
     apply_resources,
@@ -18,7 +18,7 @@ from hem.compat import (
     run_sandboxed,
     wrap_command,
 )
-from hem.errors import (
+lazy from hem.errors import (
     BackendError,
     ProfileError,
     ResourceResolutionError,
@@ -26,7 +26,7 @@ from hem.errors import (
     SandboxUnavailableError,
     UnknownResourceError,
 )
-from hem.profiles import (
+lazy from hem.profiles import (
     Profile,
     ProfileContext,
     desktop_profile,
@@ -35,7 +35,7 @@ from hem.profiles import (
     resolve_profile,
     strict_profile,
 )
-from hem.resources import (
+lazy from hem.resources import (
     DBusSession,
     DBusSystem,
     Display,
@@ -49,8 +49,8 @@ from hem.resources import (
     parse_resources,
     register_resource,
 )
-from hem.runner import get_minimal_env
-from hem.spec import LimitSpec, Mount, MountKind, NamespaceSpec, SandboxSpec
+lazy from hem.runner import get_minimal_env
+lazy from hem.spec import LimitSpec, Mount, MountKind, NamespaceSpec, SandboxSpec
 
 __all__ = [
     # Backends

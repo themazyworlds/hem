@@ -5,7 +5,6 @@ Spawns sandbox containers with sanitized launcher environments, process group is
 
 from __future__ import annotations
 
-import asyncio
 import os
 import signal
 import subprocess
@@ -13,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired
 from typing import IO, Any
+lazy import asyncio
 
 _STANDARD_LAUNCHER_ENV_KEYS: tuple[str, ...] = (
     "PATH",

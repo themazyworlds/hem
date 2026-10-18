@@ -15,16 +15,16 @@ from __future__ import annotations
 
 import contextlib
 import os
-import shutil
 import sys
-import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol, runtime_checkable
+lazy import shutil
+lazy import tempfile
 
-from hem.errors import ProfileError
-from hem.spec import MountKind, SandboxSpec
+lazy from hem.errors import ProfileError
+lazy from hem.spec import MountKind, SandboxSpec
 
 
 @dataclass(frozen=True, slots=True)

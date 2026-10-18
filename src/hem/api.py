@@ -11,13 +11,13 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from typing import IO, Any
 
-from hem.backends.base import Backend
-from hem.backends.bwrap import BubblewrapBackend
-from hem.errors import SandboxUnavailableError
-from hem.profiles import Profile, ProfileContext, resolve_profile
-from hem.resources import Resource, parse_resources
-from hem.runner import async_run_argv, popen_argv, run_argv
-from hem.spec import SandboxSpec
+lazy from hem.backends.base import Backend
+lazy from hem.backends.bwrap import BubblewrapBackend
+lazy from hem.errors import SandboxUnavailableError
+lazy from hem.profiles import Profile, ProfileContext, resolve_profile
+lazy from hem.resources import Resource, parse_resources
+lazy from hem.runner import async_run_argv, popen_argv, run_argv
+lazy from hem.spec import SandboxSpec
 
 
 def is_available() -> bool:
