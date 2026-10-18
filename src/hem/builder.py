@@ -19,6 +19,29 @@ from typing import IO, Any, Self
 
 from hem.errors import SandboxUnavailableError
 
+_STANDARD_HOST_ENV_KEYS: tuple[str, ...] = (
+    "PATH",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TERM",
+    "USER",
+    "LOGNAME",
+    "HOME",
+    "SHELL",
+    "TMPDIR",
+    "XDG_RUNTIME_DIR",
+)
+
+
+def get_minimal_env(base_env: dict[str, str] | None = None) -> dict[str, str]:
+    """Construct a minimal host execution environment, preventing host secret exposure in child processes."""
+    src = os.environ if base_env is None else base_env
+    minimal = {k: src[k] for k in _STANDARD_HOST_ENV_KEYS if k in src}
+    if "PATH" not in minimal:
+        minimal["PATH"] = "/usr/bin:/bin"
+    return minimal
+
 
 class BubblewrapBuilder:
     """Fluent, type-safe builder for constructing Bubblewrap (bwrap) execution arguments."""
@@ -196,11 +219,18 @@ class BubblewrapBuilder:
             self.tmpfs(p)
         return self
 
-    def set_namespaces(self, allow_network: bool = False, unshare_user: bool = True) -> Self:
+    def set_namespaces(
+        self,
+        allow_network: bool = False,
+        unshare_user: bool = True,
+        unshare_pid: bool = True,
+    ) -> Self:
         """Configure standard execution namespaces with deterministic parent termination."""
         ns: list[str] = ["ipc", "uts"]
         if unshare_user:
-            ns.extend(["user", "pid"])
+            ns.append("user")
+        if unshare_pid:
+            ns.append("pid")
         if not allow_network:
             ns.append("net")
         self.unshare(*ns)
@@ -402,7 +432,7 @@ class BubblewrapBuilder:
     ) -> subprocess.Popen[Any]:
         """Spawn the built bubblewrap command using subprocess.Popen."""
         full_cmd = self.build(target_cmd)
-        target_env = os.environ.copy() if env is None else env
+        target_env = get_minimal_env() if env is None else env
         return subprocess.Popen(
             full_cmd,
             cwd=cwd,
@@ -429,7 +459,7 @@ def run_command(
     stderr: int | IO[Any] | None = None,
 ) -> subprocess.CompletedProcess[Any]:
     """Execute a command synchronously using subprocess.run."""
-    target_env = os.environ.copy() if env is None else env
+    target_env = get_minimal_env() if env is None else env
     return subprocess.run(
         list(cmd),
         capture_output=capture_output,
@@ -461,7 +491,7 @@ async def async_run_command(
 ) -> subprocess.CompletedProcess[Any]:
     """Execute a command asynchronously using asyncio.create_subprocess_exec."""
     full_cmd = list(cmd)
-    target_env = os.environ.copy() if env is None else env
+    target_env = get_minimal_env() if env is None else env
     target_cwd = str(cwd) if cwd is not None else None
 
     proc_stdout = stdout

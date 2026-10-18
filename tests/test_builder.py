@@ -160,3 +160,21 @@ def test_sandbox_unavailable_error():
 
         with pytest.raises(SandboxUnavailableError):
             BubblewrapBuilder(require_available=True)
+
+
+def test_get_minimal_env():
+    from hem import get_minimal_env
+
+    custom_env = {
+        "PATH": "/custom/bin",
+        "LANG": "en_US.UTF-8",
+        "SECRET_KEY": "supersecret",
+        "AWS_SECRET_ACCESS_KEY": "secret123",
+        "TEXTILE_TOTP_SECRET": "totpsecret",
+    }
+    cleaned = get_minimal_env(custom_env)
+    assert cleaned["PATH"] == "/custom/bin"
+    assert cleaned["LANG"] == "en_US.UTF-8"
+    assert "SECRET_KEY" not in cleaned
+    assert "AWS_SECRET_ACCESS_KEY" not in cleaned
+    assert "TEXTILE_TOTP_SECRET" not in cleaned

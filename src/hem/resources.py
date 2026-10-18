@@ -39,7 +39,7 @@ def allows_network(resources: Sequence[str] | None) -> bool:
     """Check if granted resources include network access permissions."""
     if not resources:
         return False
-    return any(str(r).lower() in ("net", "network") or "net" in str(r).lower() for r in resources)
+    return any(str(r).lower().strip() in ("net", "network") for r in resources)
 
 
 def _apply_display_resource(builder: BubblewrapBuilder) -> None:
@@ -70,8 +70,8 @@ def _apply_sound_resource(builder: BubblewrapBuilder) -> None:
 def _apply_dbus_session_resource(builder: BubblewrapBuilder) -> None:
     """Resolve and mount D-Bus session bus socket and environment."""
     runtime = os.environ.get("XDG_RUNTIME_DIR")
-    if runtime and Path(runtime).exists():
-        builder.bind(runtime).setenv("XDG_RUNTIME_DIR", runtime)
+    if runtime:
+        builder.setenv("XDG_RUNTIME_DIR", runtime)
 
     bus_addr = os.environ.get("DBUS_SESSION_BUS_ADDRESS")
     if bus_addr:
@@ -83,7 +83,7 @@ def _apply_dbus_session_resource(builder: BubblewrapBuilder) -> None:
     elif runtime:
         default_bus = os.path.join(runtime, "bus")
         if Path(default_bus).exists():
-            builder.setenv("DBUS_SESSION_BUS_ADDRESS", f"unix:path={default_bus}")
+            builder.ro_bind(default_bus).setenv("DBUS_SESSION_BUS_ADDRESS", f"unix:path={default_bus}")
 
 
 def _apply_dbus_system_resource(builder: BubblewrapBuilder) -> None:

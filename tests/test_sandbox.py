@@ -3,6 +3,7 @@ Unit tests for Hem high-level Sandbox and Resource APIs.
 """
 
 import asyncio
+import os
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,12 @@ def test_resource_helpers():
     assert allows_network(["net"]) is True
     assert allows_network(["network"]) is True
     assert allows_network(["display"]) is False
+    assert allows_network(["socket:/run/NetworkManager/x.sock"]) is False
+    assert allows_network(["socket:/run/systemd/netif/leases"]) is False
+    assert allows_network(["internet"]) is False
+    assert allows_network(["dotnet"]) is False
+    assert allows_network(["net "]) is True
+    assert allows_network(["network "]) is True
 
     assert requires_host_session(["display"]) is True
     assert requires_host_session(["dbus:session"]) is True
@@ -52,6 +59,12 @@ def test_apply_resources():
     assert "--setenv" in built
     assert "MY_VAR" in built
     assert "hello" in built
+    # dbus:session must NOT bind the full XDG_RUNTIME_DIR read-write
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime:
+        bind_indices = [i for i, val in enumerate(built) if val == "--bind"]
+        for idx in bind_indices:
+            assert built[idx + 1] != runtime
 
 
 def test_create_sandbox_and_wrap_command(tmp_path: Path):
@@ -91,6 +104,9 @@ def test_sandbox_class(tmp_path: Path):
     assert "--ro-bind" in wrapped
     assert str(tmp_path.resolve()) in wrapped
     assert box.is_available() == is_available()
+    # Host session resources must preserve pid namespace isolation
+    assert "--unshare-pid" in wrapped
+    assert "--unshare-user" not in wrapped
 
 
 def test_run_sandboxed_execution():
